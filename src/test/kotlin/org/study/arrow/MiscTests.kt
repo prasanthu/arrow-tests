@@ -2,6 +2,7 @@ package org.study.arrow
 
 import arrow.core.Either
 import arrow.core.extensions.fx
+import arrow.core.fix
 import arrow.core.getOrElse
 import arrow.core.right
 import arrow.fx.IO
@@ -44,5 +45,41 @@ class MiscTests {
             result
         }.fix().unsafeRunSync()
         assert(r is Either.Right)
+    }
+
+    @Test(expected = RuntimeException::class)
+    fun testIOOldStyle() {
+        val r = IO {
+            val result: Either<KnownError, Int> = Either.fx {
+                getEitherValueWithException().getOrElse { -1 }
+            }
+            result.fix()
+        }.unsafeRunSync()
+        assert(r is Either.Right)
+    }
+
+    @Test(expected = RuntimeException::class)
+    fun testIOOldStyle2() {
+        val r = IO {
+            val result: Either<KnownError, Int> = Either.fx {
+                val j = getEitherValueWithException().bind()
+                j
+            }
+            result.fix()
+        }.unsafeRunSync()
+        assert(r is Either.Right)
+    }
+
+    @Test
+    fun testIOOldStyle2NoException() {
+        val r = IO {
+            val result: Either<KnownError, Int> = Either.fx {
+                val j = getEitherValue().bind()
+                j
+            }
+            result.fix()
+        }.unsafeRunSync()
+        assert(r is Either.Right)
+        assert(r.getOrElse { -1 } == 1)
     }
 }
