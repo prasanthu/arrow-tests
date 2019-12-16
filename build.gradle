@@ -34,6 +34,9 @@ dependencies {
     implementation "io.arrow-kt:arrow-optics:$arrow_version"
     implementation "io.arrow-kt:arrow-syntax:$arrow_version"
     kapt    "io.arrow-kt:arrow-meta:$arrow_version"
+
+    // https://mvnrepository.com/artifact/org.json/json
+    compile group: 'org.json', name: 'json', version: '20190722'
 }
 compileKotlin {
     kotlinOptions.jvmTarget = "1.8"
