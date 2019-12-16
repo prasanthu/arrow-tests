@@ -4,7 +4,6 @@ import arrow.core.Either
 import arrow.core.flatMap
 import arrow.core.left
 import arrow.core.right
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.json.JSONException
@@ -12,12 +11,11 @@ import org.json.JSONObject
 
 data class User(val id: String, val name: String)
 
-fun JSONObject.parseUser(): User = User(get("id") as String, get("name") as String)
 fun JSONObject.maybeParseUser(): Either<JSONException, User> {
     try {
         return User(get("id") as String, get("name") as String).right()
     } catch (e:JSONException) {
-       return e.left()
+        return e.left()
     }
 }
 
@@ -30,7 +28,7 @@ interface Api {
 
 suspend fun Api.getUser(id: String): Either<ApiError, User> =
     query("SELECT * FROM users WHERE id = $id")
-        .flatMap { it.maybeParseUser() }
+        .flatMap(JSONObject::maybeParseUser)
         .mapLeft { ParseError("Failed to parse") }
 
 class FxPatterns:Api {
