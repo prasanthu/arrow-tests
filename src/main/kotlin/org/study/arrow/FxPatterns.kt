@@ -29,6 +29,7 @@ fun JSONObject.parseUser(): User {
 sealed class ApiError(val message: String)
 class ParseError(message :String): ApiError(message)
 class QueryError(message :String): ApiError(message)
+class RandomQueryError(message :String): ApiError(message)
 
 interface Api {
     suspend fun query(q: String): Either<ApiError, JSONObject>
@@ -42,6 +43,7 @@ suspend fun Api.getUser(id: String): Either<ApiError, User> =
 suspend fun Api.queryUser(id: String): User {
     return query("SELECT * FROM users WHERE id = $id")
         .fold({
+            println("queryUser Query Error, $it")
             throw RuntimeException()
         }, {
             it.parseUser()
@@ -52,13 +54,18 @@ class FxPatterns:Api {
     override suspend fun query(q: String): Either<ApiError, JSONObject> {
         // Fake a query execution.
         delay(500)
-        return JSONObject("""{"id": "ABCD123", "name":"Full name"} """).right()
+        //return JSONObject("""{"id": "ABCD123", "name":"Full name"} """).right()
+        return RandomQueryError("random failure").left()
+
     }
 
     fun testIO() =
         IO.fx {
             val user = effect { queryUser("123") }
-                .handleError { QueryError("Query failed") }
+                .handleError {
+                    println("testIO Seen exception: $it")
+                    QueryError("Query failed")
+                }
                 .bind()
             effect { println("Seen $user") }.bind()
         }.handleErrorWith {
