@@ -61,13 +61,12 @@ class FxPatterns:Api {
 
     fun testIO() =
         IO.fx {
-            val user = effect { queryUser("123") }
-                .handleError {
-                    println("testIO Seen exception: $it")
-                    QueryError("Query failed")
-                }
+            val user: User = effect { queryUser("123") }
                 .bind()
-            effect { println("Seen $user") }.bind()
+            effect {
+                println("testIO user effect")
+                println("Seen --> $user")
+            }.bind()
         }.handleErrorWith {
             IO { println("Seen unexpected error: $it") }
         }
