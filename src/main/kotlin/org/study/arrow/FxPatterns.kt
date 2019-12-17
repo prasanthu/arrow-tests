@@ -4,6 +4,9 @@ import arrow.core.Either
 import arrow.core.flatMap
 import arrow.core.left
 import arrow.core.right
+import arrow.fx.IO
+import arrow.fx.extensions.fx
+import arrow.fx.handleErrorWith
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.json.JSONException
@@ -19,8 +22,13 @@ fun JSONObject.maybeParseUser(): Either<JSONException, User> {
     }
 }
 
+fun JSONObject.parseUser(): User {
+        return User(get("id") as String, get("name") as String)
+}
+
 sealed class ApiError(val message: String)
 class ParseError(message :String): ApiError(message)
+class QueryError(message :String): ApiError(message)
 
 interface Api {
     suspend fun query(q: String): Either<ApiError, JSONObject>
@@ -31,11 +39,34 @@ suspend fun Api.getUser(id: String): Either<ApiError, User> =
         .flatMap(JSONObject::maybeParseUser)
         .mapLeft { ParseError("Failed to parse") }
 
+suspend fun Api.queryUser(id: String): User {
+    return query("SELECT * FROM users WHERE id = $id")
+        .fold({
+            throw RuntimeException()
+        }, {
+            it.parseUser()
+        })
+}
+
 class FxPatterns:Api {
     override suspend fun query(q: String): Either<ApiError, JSONObject> {
         // Fake a query execution.
         delay(500)
         return JSONObject("""{"id": "ABCD123", "name":"Full name"} """).right()
+    }
+
+    fun testIO() =
+        IO.fx {
+            val user = effect { queryUser("123") }
+                .handleError { QueryError("Query failed") }
+                .bind()
+            effect { println("Seen $user") }.bind()
+        }.handleErrorWith {
+            IO { println("Seen unexpected error: $it") }
+        }
+
+    fun runTestIO() {
+        testIO().unsafeRunSync()
     }
 
     fun testPlainQuery() {
@@ -47,5 +78,5 @@ class FxPatterns:Api {
 
 fun main(args: Array<String>) {
     val patterns = FxPatterns()
-    patterns.testPlainQuery()
+    patterns.runTestIO()
 }
